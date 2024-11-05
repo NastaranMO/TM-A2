@@ -37,16 +37,82 @@ ner_tags = {
     "I-CON": 12,
 }
 number_to_ner_tag = {v: k for k, v in ner_tags.items()}
+pos_tags = {
+    "NN": 0,
+    "CD": 1,
+    ".": 2,
+    "JJ": 3,
+    "CC": 4,
+    "DT": 5,
+    "NNP": 6,
+    "NNS": 7,
+    "IN": 8,
+    "VBN": 9,
+    ",": 10,
+    "(": 11,
+    ")": 12,
+    "VBG": 13,
+    "VBD": 14,
+    "RP": 15,
+    "VBZ": 16,
+    "TO": 17,
+    "WDT": 18,
+    "JJR": 19,
+    "VB": 20,
+    "POS": 21,
+    "MD": 22,
+    "RB": 23,
+    "VBP": 24,
+    "EX": 25,
+    ":": 26,
+    "NNPS": 27,
+    "RBR": 28,
+    "PRP": 29,
+    "JJS": 30,
+    "PRP$": 31,
+    "``": 32,
+    "''": 33,
+    "WRB": 34,
+    "RBS": 35,
+    "LS": 36,
+    "$": 37,
+    "#": 38,
+    "PDT": 39,
+    "WP": 40,
+    "FW": 41,
+    "UH": 42,
+    "SYM": 43,
+    "WP$": 44,
+}
+
+
+def build_pos_tags_dict(ds):
+
+    current_index = 0
+    for line in ds["train"]:
+        content = line["text"]
+        if content.strip():
+            _, pos, _ = content.split(maxsplit=2)
+            if pos not in pos_tags:
+                pos_tags[pos] = current_index
+                current_index += 1
+
+    return pos_tags
 
 
 def process_ner(ner, sentence):
     sentence["ner_tags"].append(ner_tags[ner])
 
 
-def generate_sentences(ds, ds_type):
-    sentence = {"id": 0, "ner_tags": [], "tokens": []}
-    sentences = []
+def process_pos(pos, sentence):
+    sentence["pos_tags"].append(pos_tags[pos])
 
+
+def generate_sentences(ds, ds_type):
+    sentence = {"id": 0, "ner_tags": [], "tokens": [], "pos_tags": []}
+    sentences = []
+    # pos_tags = build_pos_tags_dict(ds)
+    # print(f"pos tags for {ds_type}: {pos_tags}")
     for line in ds["train"]:
         content = line["text"]
         if content.strip() == "":
@@ -55,10 +121,12 @@ def generate_sentences(ds, ds_type):
                 "id": len(sentences),
                 "ner_tags": [],
                 "tokens": [],
+                "pos_tags": [],
             }
         else:
-            word, _, ner = content.split(maxsplit=2)
+            word, pos, ner = content.split(maxsplit=2)
             sentence["tokens"].append(word)
+            process_pos(pos, sentence)
             process_ner(ner, sentence)
 
     return sentences
@@ -89,6 +157,8 @@ def process_create_ds():
 
 ds = process_create_ds()
 plot_distribution(ds, ner_tags, number_to_ner_tag, verbose=False)
+# print(f"ds traning: {ds['train'][0]}")
+# print(f"pos tags: {pos_tags}")
 
 
 # Part 3
@@ -204,7 +274,6 @@ def train_model(checkpoint_name_saved, run=False):
             save_strategy="epoch",
             per_device_train_batch_size=8,
             per_device_eval_batch_size=8,
-            # seed=42,
         )
 
         trainer = Trainer(
@@ -220,8 +289,8 @@ def train_model(checkpoint_name_saved, run=False):
         trainer.push_to_hub(commit_message="Training complete")
         final_results = trainer.evaluate(tokenized_datasets["test"])
         print("Final Results:", final_results)
-        print(f"f1 score macro: {final_results['f1_macro']}")
-        print(f"f1 score micro: {final_results['f1_micro']}")
+        # print(f"f1 score macro: {final_results['f1_macro']}")
+        # print(f"f1 score micro: {final_results['f1_micro']}")
 
 
 # Hyperparameter tuning
