@@ -230,7 +230,7 @@ def compute_metrics(eval_preds):
         "f1": f1_score(true_labels, true_predictions, zero_division=0),
         "f1_macro": f1_score_macro,
         "f1_micro": f1_score_micro,
-        "accuracy": all_metrics["overall_accuracy"],
+        # "accuracy": all_metrics["overall_accuracy"],
         "classification_report_details": classification_details_sklearn,
         "classfication_report_seqeval": classification_details_seqeval,
     }
@@ -298,6 +298,12 @@ def hyper_tune(checkpoint_name_saved, model_checkpoint, run=False):
                 "learning_rate": trial.suggest_loguniform("learning_rate", 1e-5, 5e-4),
                 "weight_decay": trial.suggest_loguniform("weight_decay", 1e-3, 0.1),
                 "num_train_epochs": trial.suggest_int("num_train_epochs", 2, 7),
+                "per_device_train_batch_size": trial.suggest_categorical(
+                    "per_device_train_batch_size", [8, 16, 32]
+                ),
+                "per_device_eval_batch_size": trial.suggest_categorical(
+                    "per_device_eval_batch_size", [8, 16]
+                ),
             }
 
         def model_init():
@@ -331,7 +337,7 @@ def hyper_tune(checkpoint_name_saved, model_checkpoint, run=False):
             direction="maximize",
             hp_space=optuna_hp_space,
             backend="optuna",
-            n_trials=15,
+            n_trials=5,
         )
         print("Best Hyperparameters:", best_run.hyperparameters)
         print("Best Score:", best_run.objective)
