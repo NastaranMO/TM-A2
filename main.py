@@ -14,7 +14,7 @@ from utils import plot_distribution, align_labels_with_tokens
 import numpy as np
 from sklearn.metrics import classification_report as classification_report_sklearn
 from seqeval.metrics import classification_report as classification_report_seqeval
-from seqeval.metrics import f1_score
+from seqeval.metrics import f1_score, precision_score, recall_score
 
 np.random.seed(42)
 model_checkpoint = "bert-base-cased"
@@ -220,18 +220,14 @@ def compute_metrics(eval_preds):
     report_cls_details_sklearn.to_csv(
         "classification_report.csv", mode="a", header=False
     )
-    all_metrics = metric.compute(predictions=true_predictions, references=true_labels)
-
-    report_cls_all_metric = pd.DataFrame(all_metrics).transpose()
-    report_cls_all_metric.to_csv("classification_report.csv", mode="a")
 
     f1_score_macro = f1_score(true_labels, true_predictions, average="macro")
     f1_score_micro = f1_score(true_labels, true_predictions, average="micro")
 
     return {
-        "precision": all_metrics["overall_precision"],
-        "recall": all_metrics["overall_recall"],
-        "f1": all_metrics["overall_f1"],
+        "precision": precision_score(true_labels, true_predictions, zero_division=0),
+        "recall": recall_score(true_labels, true_predictions, zero_division=0),
+        "f1": f1_score(true_labels, true_predictions, zero_division=0),
         "f1_macro": f1_score_macro,
         "f1_micro": f1_score_micro,
         "accuracy": all_metrics["overall_accuracy"],
@@ -362,6 +358,6 @@ if __name__ == "__main__":
 #     push_to_hub=True,
 #     evaluation_strategy="epoch",
 #     save_strategy="epoch",
-#     per_device_train_batch_size=16,
-#     per_device_eval_batch_size=16,
+#     per_device_train_batch_size=8,
+#     per_device_eval_batch_size=8,
 # )
